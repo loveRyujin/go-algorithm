@@ -2,20 +2,20 @@ package lru
 
 import "container/list"
 
-// Cache LRU缓存结构
+// Cache LRU cache structure
 type Cache struct {
 	capacity int
 	cache    map[any]*list.Element
 	list     *list.List
 }
 
-// entry 缓存条目
+// entry cache entry
 type entry struct {
 	key   any
 	value any
 }
 
-// New 创建一个新的LRU缓存
+// New creates a new LRU cache
 func New(capacity int) *Cache {
 	return &Cache{
 		capacity: capacity,
@@ -24,37 +24,37 @@ func New(capacity int) *Cache {
 	}
 }
 
-// Get 获取缓存中的值
+// Get retrieves a value from the cache
 func (c *Cache) Get(key any) (any, bool) {
 	if element, ok := c.cache[key]; ok {
-		// 将访问的元素移动到链表头部
+		// Move the accessed element to the front of the list
 		c.list.MoveToFront(element)
 		return element.Value.(*entry).value, true
 	}
 	return nil, false
 }
 
-// Put 向缓存中添加键值对
+// Put adds a key-value pair to the cache
 func (c *Cache) Put(key, value any) {
 	if element, ok := c.cache[key]; ok {
-		// 如果键已存在，更新值并移动到链表头部
+		// If the key already exists, update the value and move to front
 		element.Value.(*entry).value = value
 		c.list.MoveToFront(element)
 		return
 	}
 
-	// 如果缓存已满，删除最久未使用的元素
+	// If the cache is full, remove the least recently used element
 	if c.list.Len() >= c.capacity {
 		c.removeOldest()
 	}
 
-	// 添加新元素到链表头部
+	// Add new element to the front of the list
 	newEntry := &entry{key: key, value: value}
 	element := c.list.PushFront(newEntry)
 	c.cache[key] = element
 }
 
-// Remove 从缓存中删除指定键
+// Remove removes a key from the cache
 func (c *Cache) Remove(key any) bool {
 	if element, ok := c.cache[key]; ok {
 		c.removeElement(element)
@@ -63,7 +63,7 @@ func (c *Cache) Remove(key any) bool {
 	return false
 }
 
-// removeOldest 删除最久未使用的元素（链表尾部）
+// removeOldest removes the least recently used element (tail of the list)
 func (c *Cache) removeOldest() {
 	if c.list.Len() == 0 {
 		return
@@ -74,29 +74,29 @@ func (c *Cache) removeOldest() {
 	}
 }
 
-// removeElement 删除指定元素
+// removeElement removes a specific element
 func (c *Cache) removeElement(element *list.Element) {
 	c.list.Remove(element)
 	delete(c.cache, element.Value.(*entry).key)
 }
 
-// Len 返回缓存中的元素数量
+// Len returns the number of elements in the cache
 func (c *Cache) Len() int {
 	return c.list.Len()
 }
 
-// Cap 返回缓存的容量
+// Cap returns the capacity of the cache
 func (c *Cache) Cap() int {
 	return c.capacity
 }
 
-// Clear 清空缓存
+// Clear removes all elements from the cache
 func (c *Cache) Clear() {
 	c.cache = make(map[any]*list.Element)
 	c.list = list.New()
 }
 
-// Keys 返回缓存中所有的键（按访问顺序，最新的在前）
+// Keys returns all keys in the cache (in access order, most recent first)
 func (c *Cache) Keys() []any {
 	keys := make([]any, 0, c.list.Len())
 	for element := c.list.Front(); element != nil; element = element.Next() {
@@ -105,13 +105,13 @@ func (c *Cache) Keys() []any {
 	return keys
 }
 
-// Contains 检查缓存中是否包含指定键
+// Contains checks if the cache contains a specific key
 func (c *Cache) Contains(key any) bool {
 	_, ok := c.cache[key]
 	return ok
 }
 
-// Peek 查看缓存中的值但不更新访问顺序
+// Peek looks up a value without updating the access order
 func (c *Cache) Peek(key any) (any, bool) {
 	if element, ok := c.cache[key]; ok {
 		return element.Value.(*entry).value, true

@@ -7,7 +7,7 @@ import (
 func TestLRUCache(t *testing.T) {
 	cache := New(2)
 
-	// 测试基本的Put和Get操作
+	// Test basic Put and Get operations
 	cache.Put("key1", "value1")
 	cache.Put("key2", "value2")
 
@@ -19,8 +19,8 @@ func TestLRUCache(t *testing.T) {
 		t.Errorf("Expected value2, got %v", value)
 	}
 
-	// 测试容量限制
-	cache.Put("key3", "value3") // 这应该会淘汰key1，因为key2最近被访问过
+	// Test capacity limit
+	cache.Put("key3", "value3") // This should evict key1 since key2 was accessed recently
 
 	if _, ok := cache.Get("key1"); ok {
 		t.Error("key1 should have been evicted")
@@ -38,7 +38,7 @@ func TestLRUCache(t *testing.T) {
 func TestLRUCacheUpdate(t *testing.T) {
 	cache := New(2)
 
-	// 测试更新已存在的键
+	// Test updating existing key
 	cache.Put("key1", "value1")
 	cache.Put("key1", "updated_value1")
 
@@ -46,7 +46,7 @@ func TestLRUCacheUpdate(t *testing.T) {
 		t.Errorf("Expected updated_value1, got %v", value)
 	}
 
-	// 缓存应该还有空间
+	// Cache should still have space
 	if cache.Len() != 1 {
 		t.Errorf("Expected length 1, got %d", cache.Len())
 	}
@@ -55,22 +55,22 @@ func TestLRUCacheUpdate(t *testing.T) {
 func TestLRUCacheEviction(t *testing.T) {
 	cache := New(3)
 
-	// 填满缓存
+	// Fill up the cache
 	cache.Put(1, "one")
 	cache.Put(2, "two")
 	cache.Put(3, "three")
 
-	// 访问key 1，使其成为最近使用的
+	// Access key 1 to make it most recently used
 	cache.Get(1)
 
-	// 添加新的键，应该淘汰key 2
+	// Add new key, should evict key 2
 	cache.Put(4, "four")
 
 	if _, ok := cache.Get(2); ok {
 		t.Error("key 2 should have been evicted")
 	}
 
-	// 检查其他键是否还在
+	// Check that other keys are still in cache
 	if _, ok := cache.Get(1); !ok {
 		t.Error("key 1 should still be in cache")
 	}
@@ -91,7 +91,7 @@ func TestLRUCacheRemove(t *testing.T) {
 	cache.Put("b", 2)
 	cache.Put("c", 3)
 
-	// 测试删除存在的键
+	// Test removing existing key
 	if !cache.Remove("b") {
 		t.Error("Remove should return true for existing key")
 	}
@@ -104,7 +104,7 @@ func TestLRUCacheRemove(t *testing.T) {
 		t.Errorf("Expected length 2, got %d", cache.Len())
 	}
 
-	// 测试删除不存在的键
+	// Test removing non-existing key
 	if cache.Remove("d") {
 		t.Error("Remove should return false for non-existing key")
 	}
@@ -130,12 +130,12 @@ func TestLRUCachePeek(t *testing.T) {
 	cache.Put("key1", "value1")
 	cache.Put("key2", "value2")
 
-	// Peek不应该影响访问顺序
+	// Peek should not affect access order
 	if value, ok := cache.Peek("key1"); !ok || value != "value1" {
 		t.Errorf("Peek should return value1, got %v", value)
 	}
 
-	// 添加新键，key1应该被淘汰（因为Peek没有更新访问顺序）
+	// Add new key, key1 should be evicted (since Peek didn't update access order)
 	cache.Put("key3", "value3")
 
 	if _, ok := cache.Get("key1"); ok {
@@ -150,7 +150,7 @@ func TestLRUCacheKeys(t *testing.T) {
 	cache.Put("b", 2)
 	cache.Put("c", 3)
 
-	// 访问a，使其成为最近使用的
+	// Access a to make it most recently used
 	cache.Get("a")
 
 	keys := cache.Keys()
@@ -158,7 +158,7 @@ func TestLRUCacheKeys(t *testing.T) {
 		t.Errorf("Expected 3 keys, got %d", len(keys))
 	}
 
-	// 检查键的顺序（最近使用的在前）
+	// Check key order (most recently used first)
 	if keys[0] != "a" {
 		t.Errorf("Expected first key to be 'a', got %v", keys[0])
 	}
@@ -189,14 +189,14 @@ func TestLRUCacheCapacity(t *testing.T) {
 		t.Errorf("Expected capacity 5, got %d", cache.Cap())
 	}
 
-	// 添加元素不应该改变容量
+	// Adding elements should not change capacity
 	cache.Put("key", "value")
 	if cache.Cap() != 5 {
 		t.Errorf("Capacity should remain 5, got %d", cache.Cap())
 	}
 }
 
-// 基准测试
+// Benchmark tests
 func BenchmarkLRUCachePut(b *testing.B) {
 	cache := New(1000)
 	b.ResetTimer()
@@ -209,7 +209,7 @@ func BenchmarkLRUCachePut(b *testing.B) {
 func BenchmarkLRUCacheGet(b *testing.B) {
 	cache := New(1000)
 
-	// 预填充缓存
+	// Pre-populate cache
 	for i := 0; i < 1000; i++ {
 		cache.Put(i, i)
 	}
