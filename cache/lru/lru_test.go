@@ -1,6 +1,7 @@
 package lru
 
 import (
+	"sync"
 	"testing"
 )
 
@@ -232,4 +233,116 @@ func BenchmarkLRUCacheMixed(b *testing.B) {
 			cache.Get(i % 1000)
 		}
 	}
+}
+
+// Test concurrent access to ensure thread safety
+func TestLRUCacheConcurrency(t *testing.T) {
+	cache := New(100)
+	var wg sync.WaitGroup
+	numGoroutines := 10
+	numOperations := 100
+
+	// Start multiple goroutines to perform concurrent operations
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+
+			for j := 0; j < numOperations; j++ {
+				key := id*numOperations + j
+
+				// Put operation
+				cache.Put(key, key*2)
+
+				// Get operation
+				if value, ok := cache.Get(key); ok {
+					if value != key*2 {
+						t.Errorf("Expected %d, got %v", key*2, value)
+					}
+				}
+
+				// Peek operation
+				cache.Peek(key)
+
+				// Contains operation
+				cache.Contains(key)
+
+				// Remove some keys
+				if j%10 == 0 {
+					cache.Remove(key)
+				}
+			}
+		}(i)
+	}
+
+	// Additional goroutine for cache metadata operations
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < numOperations; i++ {
+			cache.Len()
+			cache.Keys()
+			if i%20 == 0 {
+				cache.Clear()
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	// Test should complete without data races or panics
+	t.Log("Concurrent test completed successfully")
+}
+
+// Test concurrent Put operations
+func TestLRUCacheConcurrentPut(t *testing.T) {
+	cache := New(50)
+	var wg sync.WaitGroup
+	numGoroutines := 20
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				cache.Put(id*100+j, id)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Verify cache properties
+	if cache.Len() > cache.Cap() {
+		t.Errorf("Cache length %d exceeds capacity %d", cache.Len(), cache.Cap())
+	}
+}
+
+// Test concurrent Get operations
+func TestLRUCacheConcurrentGet(t *testing.T) {
+	cache := New(100)
+
+	// Pre-populate cache
+	for i := 0; i < 100; i++ {
+		cache.Put(i, i*10)
+	}
+
+	var wg sync.WaitGroup
+	numGoroutines := 20
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 100; j++ {
+				if value, ok := cache.Get(j); ok {
+					if value != j*10 {
+						t.Errorf("Expected %d, got %v", j*10, value)
+					}
+				}
+			}
+		}()
+	}
+
+	wg.Wait()
 }
