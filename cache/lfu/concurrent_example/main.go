@@ -58,9 +58,9 @@ func main() {
 	fmt.Printf("Minimum frequency: %d\n", cache.MinFrequency())
 }
 
-func worker(id int, cache *lfu.Cache, operations int, wg *sync.WaitGroup, 
+func worker(id int, cache *lfu.Cache, operations int, wg *sync.WaitGroup,
 	readCount, writeCount, hitCount, missCount *int64, mu *sync.Mutex) {
-	
+
 	defer wg.Done()
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano() + int64(id)))
@@ -71,7 +71,7 @@ func worker(id int, cache *lfu.Cache, operations int, wg *sync.WaitGroup,
 			// Read operation
 			key := fmt.Sprintf("key_%d", r.Intn(100))
 			_, found := cache.Get(key)
-			
+
 			mu.Lock()
 			(*readCount)++
 			if found {
@@ -85,7 +85,7 @@ func worker(id int, cache *lfu.Cache, operations int, wg *sync.WaitGroup,
 			key := fmt.Sprintf("key_%d", r.Intn(100))
 			value := fmt.Sprintf("value_%d_%d", id, i)
 			cache.Put(key, value)
-			
+
 			mu.Lock()
 			(*writeCount)++
 			mu.Unlock()

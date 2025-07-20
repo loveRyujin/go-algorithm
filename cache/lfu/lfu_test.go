@@ -232,7 +232,7 @@ func TestLFUCacheZeroCapacity(t *testing.T) {
 	cache := New(0)
 
 	cache.Put("key", "value")
-	
+
 	if cache.Len() != 0 {
 		t.Errorf("Expected length 0 for zero capacity cache, got %d", cache.Len())
 	}
@@ -246,7 +246,7 @@ func TestLFUCacheMinFrequency(t *testing.T) {
 		t.Errorf("Expected min frequency 1, got %d", cache.MinFrequency())
 	}
 
-	cache.Get("a") // frequency becomes 2
+	cache.Get("a")    // frequency becomes 2
 	cache.Put("b", 2) // new item with frequency 1
 
 	if cache.MinFrequency() != 1 {

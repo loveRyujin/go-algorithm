@@ -9,8 +9,8 @@ import (
 type Cache struct {
 	capacity    int
 	cache       map[any]*list.Element
-	frequencies map[int]*list.List       // frequency -> doubly linked list
-	minFreq     int                      // minimum frequency
+	frequencies map[int]*list.List // frequency -> doubly linked list
+	minFreq     int                // minimum frequency
 	mutex       sync.RWMutex
 }
 
@@ -68,12 +68,12 @@ func (c *Cache) Put(key, value any) {
 
 	// Add new entry with frequency 1
 	newEntry := &entry{key: key, value: value, freq: 1}
-	
+
 	// Initialize frequency list if it doesn't exist
 	if c.frequencies[1] == nil {
 		c.frequencies[1] = list.New()
 	}
-	
+
 	element := c.frequencies[1].PushFront(newEntry)
 	c.cache[key] = element
 	c.minFreq = 1
@@ -86,7 +86,7 @@ func (c *Cache) updateFrequency(element *list.Element, entry *entry) {
 
 	// Remove from old frequency list
 	c.frequencies[oldFreq].Remove(element)
-	
+
 	// If old frequency list is empty and it's the minimum frequency, update minFreq
 	if c.frequencies[oldFreq].Len() == 0 && oldFreq == c.minFreq {
 		c.minFreq = newFreq
@@ -129,12 +129,12 @@ func (c *Cache) Remove(key any) bool {
 		entry := element.Value.(*entry)
 		c.frequencies[entry.freq].Remove(element)
 		delete(c.cache, key)
-		
+
 		// Update minFreq if necessary
 		if c.frequencies[c.minFreq].Len() == 0 {
 			c.updateMinFreq()
 		}
-		
+
 		return true
 	}
 	return false
@@ -200,7 +200,7 @@ func (c *Cache) Keys() map[int][]any {
 	defer c.mutex.RUnlock()
 
 	result := make(map[int][]any)
-	
+
 	for freq, freqList := range c.frequencies {
 		if freqList.Len() > 0 {
 			keys := make([]any, 0, freqList.Len())
@@ -211,7 +211,7 @@ func (c *Cache) Keys() map[int][]any {
 			result[freq] = keys
 		}
 	}
-	
+
 	return result
 }
 
