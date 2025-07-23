@@ -148,13 +148,17 @@ func (c *Cache) addToWindow(key, value any) {
 
 	evicted := c.window.put(key, value)
 	if evicted != nil {
-		// Window is full, candidate for main cache
+		// Window is full, try to admit evicted key to main cache
 		if c.admit(evicted.key) {
 			// Admit to probation
 			victim := c.probation.put(evicted.key, evicted.value)
 			if victim != nil {
-				// Probation is full, add victim to doorkeeper
-				c.doorkeeper.add(victim.key)
+				// Probation is full, try to move victim to protected
+				protectedVictim := c.protected.put(victim.key, victim.value)
+				if protectedVictim != nil {
+					// Protected is full, add the final victim to doorkeeper
+					c.doorkeeper.add(protectedVictim.key)
+				}
 			}
 		} else {
 			// Not admitted, add to doorkeeper
@@ -196,7 +200,8 @@ func (c *Cache) admit(candidateKey any) bool {
 	candidateFreq := c.sketch.estimate(candidateKey)
 	victimFreq := c.sketch.estimate(victimKey)
 
-	if candidateFreq > victimFreq {
+	// Admit if candidate has higher or equal frequency
+	if candidateFreq >= victimFreq {
 		c.doorkeeper.add(victimKey)
 		return true
 	}
