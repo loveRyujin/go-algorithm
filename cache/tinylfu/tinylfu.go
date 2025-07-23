@@ -29,10 +29,31 @@ func New(capacity int) *Cache {
 		capacity = 1
 	}
 
-	// Size distribution: 1% window, 80% protected, 19% probation
-	windowSize := max(1, capacity/100)
-	protectedSize := max(1, (capacity-windowSize)*80/100)
-	probationSize := capacity - windowSize - protectedSize
+	var windowSize, probationSize, protectedSize int
+
+	if capacity == 1 {
+		// Special case for capacity 1
+		windowSize = 1
+		probationSize = 0
+		protectedSize = 0
+	} else if capacity == 2 {
+		// Special case for capacity 2
+		windowSize = 1
+		probationSize = 1
+		protectedSize = 0
+	} else {
+		// Normal distribution: 1% window, but at least 1
+		windowSize = max(1, capacity/100)
+		remaining := capacity - windowSize
+		protectedSize = max(1, remaining*80/100)
+		probationSize = capacity - windowSize - protectedSize
+
+		// Ensure probationSize is not negative
+		if probationSize < 0 {
+			probationSize = 0
+			protectedSize = capacity - windowSize
+		}
+	}
 
 	cache := &Cache{
 		capacity:      capacity,
@@ -90,32 +111,41 @@ func (c *Cache) Put(key, value any) {
 	// Check if key exists in any segment
 	if c.window.contains(key) {
 		c.window.put(key, value)
+		c.sketch.increment(key)
 		return
 	}
 	if c.probation.contains(key) {
 		c.probation.put(key, value)
+		c.sketch.increment(key)
 		return
 	}
 	if c.protected.contains(key) {
 		c.protected.put(key, value)
+		c.sketch.increment(key)
 		return
 	}
 
+	// New key
 	c.sketch.increment(key)
 
 	// Add to window (new keys always go to window first)
 	c.addToWindow(key, value)
-
-	c.size++
-	if c.size > c.sampleSize {
-		c.sketch.reset()
-		c.doorkeeper.reset()
-		c.size = 0
-	}
 }
 
 // addToWindow adds a new key to the admission window
 func (c *Cache) addToWindow(key, value any) {
+	// For very small caches, handle specially
+	if c.capacity == 1 {
+		c.window.put(key, value)
+		c.size++
+		if c.size > c.sampleSize {
+			c.sketch.reset()
+			c.doorkeeper.reset()
+			c.size = 0
+		}
+		return
+	}
+
 	evicted := c.window.put(key, value)
 	if evicted != nil {
 		// Window is full, candidate for main cache
@@ -142,7 +172,12 @@ func (c *Cache) addToWindow(key, value any) {
 
 // admit decides whether a key should be admitted to the main cache
 func (c *Cache) admit(candidateKey any) bool {
-	// Always admit if there's space
+	// If probation segment doesn't exist (capacity too small), don't admit
+	if c.probationSize == 0 {
+		return false
+	}
+
+	// Always admit if there's space in probation
 	if c.probation.len() < c.probationSize {
 		return true
 	}
